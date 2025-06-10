@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "mpi.h"
 
 // #define DEBUG 1            // comentar esta linha quando for medir tempo
@@ -69,6 +70,8 @@ int main(int argc, char *argv[])
     
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &proc_n);
+
+    double start_time = MPI_Wtime(); // Start timer
     
     int delta = ARRAY_SIZE / ((proc_n+1) / 2);
     
@@ -133,6 +136,12 @@ int main(int argc, char *argv[])
     }
 
     MPI_Finalize();
+
+    double end_time = MPI_Wtime(); // End timer
+
+    if (my_rank == 0) {
+        printf("Tempo de execução: %f s\n", end_time - start_time);
+    }
 
     return 0;
 }
