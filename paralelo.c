@@ -3,7 +3,7 @@
 #include <math.h>
 #include "mpi.h"
 
-#define DEBUG 1            // comentar esta linha quando for medir tempo
+// #define DEBUG 1            // comentar esta linha quando for medir tempo
 
 int RESULT_TAG = 0;
 int REQUEST_TAG = 1;
@@ -71,23 +71,19 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &proc_n);
     
     int delta = ARRAY_SIZE / ((proc_n+1) / 2);
-
-    printf("Delta %d Size %d \n", delta, ARRAY_SIZE);
     
-    printf("Iniciando p%d\n", my_rank);
     if (my_rank != 0) {
         father = (my_rank - 1) / 2;
-        // MPI_Probe(father, REQUEST_TAG, MPI_COMM_WORLD, &status);
+
         int level = (int)floor(log2(my_rank + 1));
         
         int count = ARRAY_SIZE/pow(2,level);
-        // MPI_Get_count(&status, MPI_INT, &count);
-        printf("%d: count %d\n", my_rank, count);
+
         vetor = (int*) malloc(count * sizeof(int));
         
         MPI_Status status;
         MPI_Recv(vetor, count, MPI_INT, father, REQUEST_TAG, MPI_COMM_WORLD, &status);
-        
+
         tam_vetor = count;
     } else {
         int i;
@@ -97,7 +93,7 @@ int main(int argc, char *argv[])
             vetor[i] = ARRAY_SIZE-i;
         
         #ifdef DEBUG
-        printf("\nVetor: ");
+        printf("\nVetor Inicial: ");
         for (i=0 ; i<ARRAY_SIZE; i++)              /* print unsorted array */
             printf("[%03d] ", vetor[i]);
         printf("\n");
@@ -107,14 +103,11 @@ int main(int argc, char *argv[])
     }
 
     if (tam_vetor <= delta) {
-        printf("%d: sorting\n", my_rank);
-        bs(ARRAY_SIZE, vetor);                     /* sort array */
+        bs(tam_vetor, vetor);                     /* sort array */
     } else {
-        printf("%d: div\n", my_rank);
         int left = 2 * my_rank + 1;
         int right = 2 * my_rank + 2;
-        printf("%d: left %d\n", my_rank, left);
-        printf("%d: right %d\n", my_rank, right);
+
         MPI_Send(&vetor[0], tam_vetor/2, MPI_INT, left, REQUEST_TAG, MPI_COMM_WORLD);
         MPI_Send(&vetor[tam_vetor/2], tam_vetor/2, MPI_INT, right, REQUEST_TAG, MPI_COMM_WORLD);
 
@@ -123,17 +116,16 @@ int main(int argc, char *argv[])
         MPI_Recv(vetor, tam_vetor/2, MPI_INT, left, RESULT_TAG, MPI_COMM_WORLD, &statusL);
         MPI_Recv(&vetor[tam_vetor/2], tam_vetor/2, MPI_INT, right, RESULT_TAG, MPI_COMM_WORLD, &statusR);
 
-        //intercala
+        vetor = interleaving(vetor, tam_vetor);
     }
      
 
     if (my_rank != 0) {
-        printf("%d: father %d\n", my_rank, father);
-        MPI_Send(&vetor[0], tam_vetor, MPI_INT, father, RESULT_TAG, MPI_COMM_WORLD);
+        MPI_Send(vetor, tam_vetor, MPI_INT, father, RESULT_TAG, MPI_COMM_WORLD);
     } else {
         #ifdef DEBUG
         int i;
-        printf("\nVetor: ");
+        printf("\nVetor Final: ");
         for (i=0 ; i<ARRAY_SIZE; i++)                              /* print sorted array */
             printf("[%03d] ", vetor[i]);
         printf("\n");
